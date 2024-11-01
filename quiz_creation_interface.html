@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Creation - AI Coder</title>
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar for easy navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">AI Coder</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="quiz_creation.html">Create Quiz</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Dashboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content area for quiz creation -->
+    <div class="container mt-4">
+        <h2>Create a New Quiz</h2>
+        <form id="quizForm">
+            <!-- Quiz title input -->
+            <div class="mb-3">
+                <label for="quizTitle" class="form-label">Quiz Title</label>
+                <input type="text" class="form-control" id="quizTitle" placeholder="Enter quiz title" required>
+            </div>
+            <!-- Quiz description input -->
+            <div class="mb-3">
+                <label for="quizDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="quizDescription" rows="3" placeholder="Enter quiz description" required></textarea>
+            </div>
+            <!-- Time limit input -->
+            <div class="mb-3">
+                <label for="timeLimit" class="form-label">Time Limit (minutes)</label>
+                <input type="number" class="form-control" id="timeLimit" placeholder="Enter time limit" required>
+            </div>
+            <!-- Dynamic question area -->
+            <div id="questionContainer"></div>
+            <button type="button" class="btn btn-secondary mt-2" id="addQuestionButton">Add Question</button>
+            <button type="submit" class="btn btn-primary mt-2">Create Quiz</button>
+        </form>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Add functionality for adding questions
+        document.getElementById('addQuestionButton').addEventListener('click', function() {
+            const questionContainer = document.getElementById('questionContainer');
+            const questionCount = questionContainer.children.length + 1;
+
+            // Create new question elements dynamically
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'mb-3';
+            questionDiv.innerHTML = `
+                <h5>Question ${questionCount}</h5>
+                <div class="mb-3">
+                    <label for="questionText${questionCount}" class="form-label">Question Text</label>
+                    <input type="text" class="form-control" id="questionText${questionCount}" placeholder="Enter question" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Question Type</label>
+                    <select class="form-select">
+                        <option value="multiple-choice">Multiple Choice</option>
+                        <option value="true-false">True/False</option>
+                        <option value="short-answer">Short Answer</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-danger remove-question-button">Remove Question</button>
+            `;
+            questionContainer.appendChild(questionDiv);
+
+            // Remove question functionality
+            questionDiv.querySelector('.remove-question-button').addEventListener('click', function() {
+                questionContainer.removeChild(questionDiv);
+            });
+        });
+
+        // Mock form submission
+        document.getElementById('quizForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            alert('Quiz created successfully with mock data!');
+        });
+    </script>
+</body>
+</html>
