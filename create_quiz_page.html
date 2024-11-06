@@ -130,6 +130,63 @@
                 questionsContainer.removeChild(questionDiv);
             });
         });
+
+        document.getElementById('quizForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const title = document.getElementById('quizTitle').value;
+            const description = document.getElementById('quizDescription').value;
+            const timeLimit = document.getElementById('quizTimeLimit').value;
+            const questions = [];
+
+            document.querySelectorAll('#questionsContainer > div').forEach((questionDiv, index) => {
+                const questionType = document.getElementById(`questionType${index}`).value;
+                const questionText = document.getElementById(`questionText${index}`).value;
+                const answer = document.getElementById(`answer${index}`).value;
+
+                const options = [];
+                if (questionType === 'multipleChoice') {
+                    questionDiv.querySelectorAll('.multiple-choice-options input').forEach((input) => {
+                        options.push(input.value);
+                    });
+                }
+
+                questions.push({
+                    type: questionType,
+                    text: questionText,
+                    answer: answer,
+                    options: options
+                });
+            });
+
+            const quizData = {
+                title,
+                description,
+                timeLimit,
+                questions
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/quizzes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(quizData)
+                });
+
+                if (response.ok) {
+                    alert('Quiz created successfully');
+                    // Optionally, redirect to another page or reset the form
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error creating quiz:', error);
+                alert('Error creating quiz');
+            }
+        });
     </script>
 </body>
 </html>
