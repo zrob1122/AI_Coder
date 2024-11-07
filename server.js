@@ -13,10 +13,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Database connection
 const db = mysql.createConnection({
-    host: 'localhost',
+    host: '127.0.0.1',
     user: 'root',
-    password: 'yourpassword',
-    database: 'QuizApp'
+    password: 'test',
+    database: 'quizapp'
 });
 
 db.connect(err => {
@@ -27,12 +27,15 @@ db.connect(err => {
     console.log('Connected to MySQL database');
 });
 
+app.use(express.static('public')) // This line lets us have index be the default page, i've placed all other pages into the public folder
+
 // Route for creating a new quiz (handles form submission from create_quiz_page.html)
 app.post('/create-quiz', (req, res) => {
     const { title, description, timeLimit, questions } = req.body;
+    console.log(title, description, timeLimit, questions)
 
     // Insert quiz into the database
-    const quizQuery = `INSERT INTO Quiz (Title, Description, TimeLimit) VALUES (?, ?, ?)`;
+    const quizQuery = `INSERT INTO quiz (Title, Description, TimeLimit) VALUES (?, ?, ?)`; // Quiz -> quiz
     db.query(quizQuery, [title, description, timeLimit], (err, result) => {
         if (err) {
             console.error('Error inserting quiz:', err);
@@ -45,7 +48,8 @@ app.post('/create-quiz', (req, res) => {
         if (questions && questions.length > 0) {
             const questionQueries = questions.map((q) => {
                 return new Promise((resolve, reject) => {
-                    const questionQuery = `INSERT INTO Question (QuizID, QuestionText, QuestionType) VALUES (?, ?, ?)`;
+                    // Question -> question
+                    const questionQuery = `INSERT INTO question (QuizID, QuestionText, QuestionType) VALUES (?, ?, ?)`;
                     db.query(questionQuery, [quizId, q.text, q.type], (err, result) => {
                         if (err) reject(err);
                         resolve(result);
