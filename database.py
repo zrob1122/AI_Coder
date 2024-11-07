@@ -1,3 +1,5 @@
+# Generated via ChatGPT
+
 import mysql.connector
 from mysql.connector import Error
 
@@ -85,6 +87,7 @@ CREATE TABLE IF NOT EXISTS Question (
     QuestionID INT PRIMARY KEY AUTO_INCREMENT,
     QuizID INT,
     QuestionText TEXT,
+    CorrectAnswer TEXT,
     QuestionType ENUM('True/False', 'Multiple Choice', 'Checkbox', 'Free-form'),
     FOREIGN KEY (QuizID) REFERENCES Quiz(QuizID)
 );
