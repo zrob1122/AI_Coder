@@ -73,11 +73,15 @@ app.post('/create-quiz', (req, res) => {
 
 // Route for fetching quizzes for management
 app.get('/quizzes', (req, res) => {
-    const query = `SELECT * FROM Quiz`;
-    db.query(query, (err, results) => {
+    const quizzesQuery = `
+        SELECT q.id, q.title, qr.candidate_name, qr.score
+        FROM quizzes q
+        LEFT JOIN quiz_results qr ON q.id = qr.quiz_id
+    `;
+
+    db.query(quizzesQuery, (err, results) => {
         if (err) {
-            console.error('Error fetching quizzes:', err);
-            return res.status(500).json({ error: 'Database error' });
+            return res.status(500).json({ error: err.message });
         }
         res.json(results);
     });
@@ -85,20 +89,40 @@ app.get('/quizzes', (req, res) => {
 
 // Route for fetching analytics data
 app.get('/analytics', (req, res) => {
-    // Example query to get summary data
-    const query = `
-        SELECT 
-            COUNT(*) AS totalQuizzes,
-            (SELECT COUNT(*) FROM QuizResponse) AS totalResponses,
-            (SELECT AVG(TotalScore) FROM QuizResult) AS averageScore
-        FROM Quiz
-    `;
-    db.query(query, (err, result) => {
+    const totalTestsCreatedQuery = 'SELECT COUNT(*) AS totalTestsCreated FROM quizzes';
+    const testsTakenQuery = 'SELECT COUNT(*) AS testsTaken FROM quiz_results';
+    const averageScoreQuery = 'SELECT AVG(score) AS averageScore FROM quiz_results';
+    const averageTimeLimitQuery = 'SELECT AVG(time_limit) AS averageTimeLimit FROM quizzes';
+
+    db.query(totalTestsCreatedQuery, (err, totalTestsCreatedResult) => {
         if (err) {
-            console.error('Error fetching analytics:', err);
-            return res.status(500).json({ error: 'Database error' });
+            return res.status(500).json({ error: err.message });
         }
-        res.json(result[0]);
+
+        db.query(testsTakenQuery, (err, testsTakenResult) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+
+            db.query(averageScoreQuery, (err, averageScoreResult) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+
+                db.query(averageTimeLimitQuery, (err, averageTimeLimitResult) => {
+                    if (err) {
+                        return res.status(500).json({ error: err.message });
+                    }
+
+                    res.json({
+                        totalTestsCreated: totalTestsCreatedResult[0].totalTestsCreated,
+                        testsTaken: testsTakenResult[0].testsTaken,
+                        averageScore: averageScoreResult[0].averageScore,
+                        averageTimeLimit: averageTimeLimitResult[0].averageTimeLimit
+                    });
+                });
+            });
+        });
     });
 });
 
