@@ -32,10 +32,9 @@ app.use(express.static('public')) // This line lets us have index be the default
 // Route for creating a new quiz (handles form submission from create_quiz_page.html)
 app.post('/create-quiz', (req, res) => {
     const { title, description, timeLimit, questions } = req.body;
-    console.log(title, description, timeLimit, questions)
-
-    // Insert quiz into the database
-    const quizQuery = `INSERT INTO quiz (Title, Description, TimeLimit) VALUES (?, ?, ?)`; // Quiz -> quiz
+    
+    // Insert the quiz into the database
+    const quizQuery = `INSERT INTO quiz (Title, Description, TimeLimit) VALUES (?, ?, ?)`;
     db.query(quizQuery, [title, description, timeLimit], (err, result) => {
         if (err) {
             console.error('Error inserting quiz:', err);
@@ -44,32 +43,51 @@ app.post('/create-quiz', (req, res) => {
 
         const quizId = result.insertId;
 
-        // Insert questions into the database
-        if (questions && questions.length > 0) {
-            const questionQueries = questions.map((q) => {
-                return new Promise((resolve, reject) => {
-                    // Question -> question
-                    const questionQuery = `INSERT INTO question (QuizID, QuestionText, QuestionType) VALUES (?, ?, ?)`;
-                    db.query(questionQuery, [quizId, q.text, q.type], (err, result) => {
-                        if (err) reject(err);
-                        resolve(result);
-                    });
+        // Prepare to insert questions and options
+        const questionPromises = questions.map((q) => {
+            return new Promise((resolve, reject) => {
+                const questionQuery = `INSERT INTO question (QuizID, QuestionText, QuestionType, CorrectAnswer) VALUES (?, ?, ?, ?)`;
+                db.query(questionQuery, [quizId, q.text, q.type, q.answer], (err, result) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const questionId = result.insertId;
+
+                        // Insert options if the question type is 'Multiple Choice' or similar
+                        if (q.options && q.options.length > 0) {
+                            const optionPromises = q.options.map((optionText) => {
+                                return new Promise((resolveOption, rejectOption) => {
+                                    const optionQuery = `INSERT INTO answeroption (QuestionID, OptionText) VALUES (?, ?)`;
+                                    db.query(optionQuery, [questionId, optionText], (err) => {
+                                        if (err) {
+                                            rejectOption(err);
+                                        } else {
+                                            resolveOption();
+                                        }
+                                    });
+                                });
+                            });
+                            
+                            Promise.all(optionPromises).then(resolve).catch(reject);
+                        } else {
+                            resolve(); // No options to insert
+                        }
+                    }
                 });
             });
+        });
 
-            Promise.all(questionQueries)
-                .then(() => {
-                    res.status(201).json({ message: 'Quiz and questions created successfully' });
-                })
-                .catch((err) => {
-                    console.error('Error inserting questions:', err);
-                    res.status(500).json({ error: 'Database error when inserting questions' });
-                });
-        } else {
-            res.status(201).json({ message: 'Quiz created without questions' });
-        }
+        Promise.all(questionPromises)
+            .then(() => {
+                res.status(201).json({ message: 'Quiz and questions created successfully' });
+            })
+            .catch((err) => {
+                console.error('Error inserting questions or options:', err);
+                res.status(500).json({ error: 'Database error when inserting questions or options' });
+            });
     });
 });
+
 
 // Route for fetching quizzes for management
 app.get('/quizzes', (req, res) => {
