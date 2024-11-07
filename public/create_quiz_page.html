@@ -46,9 +46,9 @@
                 </div>
             </div>
             <!-- Main Content Area -->
-            <div class="col-md-9"> <!--JESSE added names for route handling. Added route handling to quiz submission-->
+            <div class="col-md-9">
                 <h2>Create a New Quiz</h2>
-                <form id="quizForm" action="/create-quiz" method="POST">
+                <form id="quizForm">
                     <div class="mb-3">
                         <label for="quizTitle" class="form-label">Quiz Title</label>
                         <input type="text" class="form-control" id="quizTitle" name="title" placeholder="Enter quiz title">
@@ -84,9 +84,9 @@
                 <div class="mb-3">
                     <label for="questionType${questionIndex}" class="form-label">Question Type</label>
                     <select class="form-select question-type" id="questionType${questionIndex}" data-index="${questionIndex}">
-                        <option value="multipleChoice" selected>Multiple Choice</option>
-                        <option value="trueFalse">True/False</option>
-                        <option value="shortAnswer">Short Answer</option>
+                        <option value="Multiple Choice" selected>Multiple Choice</option>
+                        <option value="True/False">True/False</option>
+                        <option value="Free-form">Short Answer</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -112,14 +112,14 @@
             const multipleChoiceOptions = document.getElementById(`multipleChoiceOptions${questionIndex}`);
 
             // Set initial visibility based on default selected value
-            if (questionTypeSelect.value === 'multipleChoice') {
+            if (questionTypeSelect.value === 'Multiple Choice') {
                 multipleChoiceOptions.style.display = 'block';
             } else {
                 multipleChoiceOptions.style.display = 'none';
             }
 
             questionTypeSelect.addEventListener('change', function() {
-                if (this.value === 'multipleChoice') {
+                if (this.value === 'Multiple Choice') {
                     multipleChoiceOptions.style.display = 'block';
                 } else {
                     multipleChoiceOptions.style.display = 'none';
@@ -129,6 +129,63 @@
             questionDiv.querySelector('.delete-question-button').addEventListener('click', function() {
                 questionsContainer.removeChild(questionDiv);
             });
+        });
+
+        document.getElementById('quizForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const title = document.getElementById('quizTitle').value;
+            const description = document.getElementById('quizDescription').value;
+            const timeLimit = document.getElementById('quizTimeLimit').value;
+            const questions = [];
+
+            document.querySelectorAll('#questionsContainer > div').forEach((questionDiv, index) => {
+                const questionType = document.getElementById(`questionType${index}`).value;
+                const questionText = document.getElementById(`questionText${index}`).value;
+                const answer = document.getElementById(`answer${index}`).value;
+
+                const options = [];
+                if (questionType === 'Multiple Choice') {
+                    questionDiv.querySelectorAll('.multiple-choice-options input').forEach((input) => {
+                        options.push(input.value);
+                    });
+                }
+
+                questions.push({
+                    type: questionType,
+                    text: questionText,
+                    answer: answer,
+                    options: options
+                });
+            });
+
+            const quizData = {
+                title,
+                description,
+                timeLimit,
+                questions
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/create-quiz', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(quizData)
+                });
+
+                if (response.ok) {
+                    alert('Quiz created successfully');
+                    // Optionally, redirect to another page or reset the form
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error creating quiz:', error);
+                alert('Error creating quiz');
+            }
         });
     </script>
 </body>
