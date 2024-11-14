@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Quiz</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
@@ -12,179 +10,146 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">AI Coder</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="collapse navbar-collapse">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" aria-current="page" href="index.html">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="create_quiz_page.html">Create Quiz</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="manage_quizzes_page.html">Manage Quizzes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="analytics_page.html">Analytics</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="create_quiz_page.html">Create Quiz</a></li>
+                    <li class="nav-item"><a class="nav-link" href="manage_quizzes_page.html">Manage Quizzes</a></li>
                 </ul>
             </div>
         </div>
     </nav>
-    <!-- Main Content -->
-    <div class="container mt-5">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3">
-                <div class="list-group">
-                    <a href="index.html" class="list-group-item list-group-item-action">Home</a>
-                    <a href="create_quiz_page.html" class="list-group-item list-group-item-action active">Create Quiz</a>
-                    <a href="manage_quizzes_page.html" class="list-group-item list-group-item-action">Manage Quizzes</a>
-                    <a href="analytics_page.html" class="list-group-item list-group-item-action">Analytics</a>
-                </div>
-            </div>
-            <!-- Main Content Area -->
-            <div class="col-md-9">
-                <h2>Create a New Quiz</h2>
-                <form id="quizForm">
-                    <div class="mb-3">
-                        <label for="quizTitle" class="form-label">Quiz Title</label>
-                        <input type="text" class="form-control" id="quizTitle" name="title" placeholder="Enter quiz title">
-                    </div>
-                    <div class="mb-3">
-                        <label for="quizDescription" class="form-label">Quiz Description</label>
-                        <textarea class="form-control" id="quizDescription" name="description" rows="3" placeholder="Enter quiz description"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="quizTimeLimit" class="form-label">Time Limit (minutes)</label>
-                        <input type="number" class="form-control" id="quizTimeLimit" name="timeLimit" placeholder="Enter time limit in minutes">
-                    </div>
-                    <div id="questionsContainer" name="questions"></div>
-                    <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-secondary mb-3" id="addQuestionButton">Add Question</button>
-                        <button type="submit" class="btn btn-primary mb-3">Create Quiz</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.getElementById('addQuestionButton').addEventListener('click', function() {
-            const questionsContainer = document.getElementById('questionsContainer');
-            const questionIndex = questionsContainer.children.length;
 
+    <div class="container mt-5">
+        <h2>Create a New Quiz</h2>
+        <form id="quizForm">
+            <!-- Quiz Details -->
+            <div class="mb-3">
+                <label for="quizTitle" class="form-label">Quiz Title</label>
+                <input type="text" class="form-control" id="quizTitle" required>
+            </div>
+            <div class="mb-3">
+                <label for="quizDescription" class="form-label">Quiz Description</label>
+                <textarea class="form-control" id="quizDescription"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="quizTimeLimit" class="form-label">Time Limit (minutes)</label>
+                <input type="number" class="form-control" id="quizTimeLimit" required min="1">
+            </div>
+            <div class="mb-3">
+                <label for="candidateEmail" class="form-label">Candidate's Email (optional)</label>
+                <input type="email" class="form-control" id="candidateEmail">
+            </div>
+
+            <!-- Questions Container -->
+            <div id="questionsContainer"></div>
+            <button type="button" class="btn btn-secondary" id="addQuestionButton">Add Question</button>
+            <button type="submit" class="btn btn-primary mt-3">Create Quiz</button>
+        </form>
+    </div>
+
+    <!-- JavaScript Section -->
+    <script>
+        const questionsContainer = document.getElementById('questionsContainer');
+        document.getElementById('addQuestionButton').addEventListener('click', addQuestion);
+
+        function addQuestion() {
+            const questionIndex = questionsContainer.children.length;
             const questionDiv = document.createElement('div');
-            questionDiv.className = 'mb-3';
+            questionDiv.className = 'card p-3 mb-4';
             questionDiv.innerHTML = `
                 <h5>Question ${questionIndex + 1}</h5>
                 <div class="mb-3">
                     <label for="questionType${questionIndex}" class="form-label">Question Type</label>
                     <select class="form-select question-type" id="questionType${questionIndex}" data-index="${questionIndex}">
-                        <option value="Multiple Choice" selected>Multiple Choice</option>
+                        <option value="Multiple Choice">Multiple Choice</option>
+                        <option value="Check-All-That-Apply">Check-All-That-Apply</option>
                         <option value="True/False">True/False</option>
                         <option value="Free-form">Short Answer</option>
                     </select>
                 </div>
                 <div class="mb-3">
                     <label for="questionText${questionIndex}" class="form-label">Question Text</label>
-                    <input type="text" class="form-control" id="questionText${questionIndex}" placeholder="Enter question text">
+                    <input type="text" class="form-control" id="questionText${questionIndex}" required>
                 </div>
-                <div class="mb-3 multiple-choice-options" id="multipleChoiceOptions${questionIndex}">
+                <div class="options-container mb-3" id="optionsContainer${questionIndex}">
                     <label class="form-label">Options</label>
-                    <input type="text" class="form-control mb-2" placeholder="Option 1">
-                    <input type="text" class="form-control mb-2" placeholder="Option 2">
-                    <input type="text" class="form-control mb-2" placeholder="Option 3">
-                    <input type="text" class="form-control mb-2" placeholder="Option 4">
+                    <div id="optionsList${questionIndex}"></div>
+                    <button type="button" class="btn btn-secondary" onclick="addOption(${questionIndex})">Add Option</button>
                 </div>
-                <div class="mb-3">
-                    <label for="answer${questionIndex}" class="form-label">Answer</label>
-                    <input type="text" class="form-control" id="answer${questionIndex}" placeholder="Enter answer">
-                </div>
-                <button type="button" class="btn btn-danger mb-3 delete-question-button">Delete Question</button>
+                <button type="button" class="btn btn-danger mt-2" onclick="deleteQuestion(this)">Delete Question</button>
             `;
             questionsContainer.appendChild(questionDiv);
+        }
 
-            const questionTypeSelect = document.getElementById(`questionType${questionIndex}`);
-            const multipleChoiceOptions = document.getElementById(`multipleChoiceOptions${questionIndex}`);
+        function addOption(questionIndex) {
+            const optionsList = document.getElementById(`optionsList${questionIndex}`);
+            const optionIndex = optionsList.children.length;
 
-            // Set initial visibility based on default selected value
-            if (questionTypeSelect.value === 'Multiple Choice') {
-                multipleChoiceOptions.style.display = 'block';
-            } else {
-                multipleChoiceOptions.style.display = 'none';
-            }
+            const optionDiv = document.createElement('div');
+            optionDiv.className = 'input-group mb-2';
+            optionDiv.innerHTML = `
+                <input type="text" class="form-control" placeholder="Option text" id="optionText${questionIndex}_${optionIndex}">
+                <div class="input-group-text">
+                    <input type="checkbox" id="isCorrect${questionIndex}_${optionIndex}" title="Mark as correct">
+                </div>
+                <button type="button" class="btn btn-danger" onclick="deleteOption(this)">Delete</button>
+            `;
+            optionsList.appendChild(optionDiv);
+        }
 
-            questionTypeSelect.addEventListener('change', function() {
-                if (this.value === 'Multiple Choice') {
-                    multipleChoiceOptions.style.display = 'block';
-                } else {
-                    multipleChoiceOptions.style.display = 'none';
-                }
-            });
+        function deleteOption(button) {
+            button.parentElement.remove();
+        }
 
-            questionDiv.querySelector('.delete-question-button').addEventListener('click', function() {
-                questionsContainer.removeChild(questionDiv);
-            });
-        });
+        function deleteQuestion(button) {
+            button.closest('.card').remove();
+        }
 
-        document.getElementById('quizForm').addEventListener('submit', async function(event) {
+        document.getElementById('quizForm').addEventListener('submit', async (event) => {
             event.preventDefault();
 
             const title = document.getElementById('quizTitle').value;
             const description = document.getElementById('quizDescription').value;
-            const timeLimit = document.getElementById('quizTimeLimit').value;
+            const timeLimit = parseInt(document.getElementById('quizTimeLimit').value);
+            const candidateEmail = document.getElementById('candidateEmail').value;
             const questions = [];
 
-            document.querySelectorAll('#questionsContainer > div').forEach((questionDiv, index) => {
-                const questionType = document.getElementById(`questionType${index}`).value;
-                const questionText = document.getElementById(`questionText${index}`).value;
-                const answer = document.getElementById(`answer${index}`).value;
+            document.querySelectorAll('.card').forEach((div, index) => {
+                const type = div.querySelector('.question-type').value;
+                const text = div.querySelector(`#questionText${index}`).value;
 
                 const options = [];
-                if (questionType === 'Multiple Choice') {
-                    questionDiv.querySelectorAll('.multiple-choice-options input').forEach((input) => {
-                        options.push(input.value);
-                    });
-                }
-
-                questions.push({
-                    type: questionType,
-                    text: questionText,
-                    answer: answer,
-                    options: options
+                const correctAnswers = [];
+                div.querySelectorAll(`#optionsList${index} .input-group`).forEach((optionDiv, i) => {
+                    const optionText = optionDiv.querySelector(`#optionText${index}_${i}`).value;
+                    const isCorrect = optionDiv.querySelector(`#isCorrect${index}_${i}`).checked;
+                    options.push(optionText);
+                    if (isCorrect) correctAnswers.push(optionText);
                 });
+
+                questions.push({ type, text, options, correctAnswers });
             });
 
-            const quizData = {
-                title,
-                description,
-                timeLimit,
-                questions
-            };
+            const quizData = { title, description, timeLimit, candidateEmail, questions };
 
             try {
-                const response = await fetch('http://localhost:3000/create-quiz', {
+                const response = await fetch('/create-quiz', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(quizData)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(quizData),
+                    credentials: 'include'
                 });
 
+                const data = await response.json();
                 if (response.ok) {
-                    alert('Quiz created successfully');
-                    // Optionally, redirect to another page or reset the form
+                    alert(`Quiz created successfully! Link: ${data.link}`);
+                    window.location.href = 'manage_quizzes_page.html';
                 } else {
-                    const errorData = await response.json();
-                    alert(`Error: ${errorData.error}`);
+                    alert('Failed to create quiz');
                 }
             } catch (error) {
                 console.error('Error creating quiz:', error);
-                alert('Error creating quiz');
             }
         });
     </script>
