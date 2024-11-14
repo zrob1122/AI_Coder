@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Quizzes</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">AI Coder</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" aria-current="page" href="index.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="create_quiz_page.html">Create Quiz</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="manage_quizzes_page.html">Manage Quizzes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="analytics_page.html">Analytics</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- Main Content -->
+    <div class="container mt-5">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="index.html" class="list-group-item list-group-item-action">Home</a>
+                    <a href="create_quiz_page.html" class="list-group-item list-group-item-action">Create Quiz</a>
+                    <a href="manage_quizzes_page.html" class="list-group-item list-group-item-action active">Manage Quizzes</a>
+                    <a href="analytics_page.html" class="list-group-item list-group-item-action">Analytics</a>
+                </div>
+            </div>
+            <!-- Main Content Area -->
+            <div class="col-md-9">
+                <h2>Manage Quizzes</h2>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">Quiz Link</th>
+                            <th scope="col">Candidate Name</th>
+                            <th scope="col">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quizzesTableBody">
+                        <!-- Rows will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function fetchQuizzes() {
+            try {
+                const response = await fetch('http://localhost:5000/create-quiz');
+                const quizzes = await response.json();
+
+                const tableBody = document.getElementById('quizzesTableBody');
+                tableBody.innerHTML = '';
+
+                quizzes.forEach(quiz => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><a href="#">${quiz.title}</a></td>
+                        <td>${quiz.candidate_name || 'N/A'}</td>
+                        <td>${quiz.score !== null ? `${quiz.score}%` : 'N/A'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching quizzes:', error);
+            }
+        }
+
+        // Fetch quizzes on page load
+        document.addEventListener('DOMContentLoaded', fetchQuizzes);
+    </script>
+</body>
+</html>
