@@ -26,6 +26,22 @@ def create_database(connection, query):
     except Error as e:
         print(f"The error '{e}' occurred")
 
+def delete_quiz(connection, quiz_id, employer_id):
+    cursor = connection.cursor()
+    try:
+        # Delete associated questions first
+        cursor.execute("DELETE FROM questions WHERE quiz_id = %s", (quiz_id,))
+        # Now delete the quiz itself
+        cursor.execute("DELETE FROM quizzes WHERE id = %s AND employer_id = %s", (quiz_id, employer_id))
+        connection.commit()
+        return True
+    except Error as e:
+        print(f"Failed to delete quiz: {e}")
+        connection.rollback()
+        return False
+    finally:
+        cursor.close()
+
 def execute_query(connection, query):
     """Execute a single query to create tables."""
     cursor = connection.cursor()
