@@ -1,5 +1,3 @@
-const express = require('express');
-const mysql = require('mysql2');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
@@ -157,22 +155,47 @@ app.get('/quizzes', (req, res) => {
     });
 });
 
-// Delete a specific quiz
 app.delete('/quiz/:id', (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const quizId = req.params.id;
-    const deleteQuery = `DELETE FROM quizzes WHERE id = ? AND employer_id = ?`;
+    const userId = req.session.userId;
 
-    db.query(deleteQuery, [quizId, req.session.userId], (err, result) => {
+    // Step 1: Delete from answer_options
+    db.query("DELETE answer_options FROM answer_options INNER JOIN questions ON answer_options.question_id = questions.id WHERE questions.quiz_id = ?", [quizId], (err, result) => {
         if (err) {
+            console.error("Failed to delete answer options:", err);
             return res.status(500).json({ error: 'Failed to delete quiz' });
         }
-        res.json({ message: 'Quiz deleted successfully' });
+        console.log(`Deleted answer options associated with quiz ID: ${quizId}`);
+
+        // Step 2: Delete from questions
+        db.query("DELETE FROM questions WHERE quiz_id = ?", [quizId], (err, result) => {
+            if (err) {
+                console.error("Failed to delete questions:", err);
+                return res.status(500).json({ error: 'Failed to delete quiz' });
+            }
+            console.log(`Deleted questions associated with quiz ID: ${quizId}`);
+
+            // Step 3: Delete from quizzes
+            db.query("DELETE FROM quizzes WHERE id = ? AND employer_id = ?", [quizId, userId], (err, result) => {
+                if (err) {
+                    console.error("Failed to delete quiz:", err);
+                    return res.status(500).json({ error: 'Failed to delete quiz' });
+                }
+                if (result.affectedRows === 0) {
+                    console.log("No quiz found with that ID for the current user.");
+                    return res.status(404).json({ error: 'Quiz not found' });
+                }
+                console.log(`Quiz with ID ${quizId} deleted successfully.`);
+                res.json({ message: 'Quiz deleted successfully' });
+            });
+        });
     });
 });
+
 
 // Fetch details of a specific quiz for editing
 app.get('/quiz/:id', (req, res) => {
