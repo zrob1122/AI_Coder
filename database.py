@@ -88,6 +88,7 @@ CREATE TABLE employers (
 );
 """
 
+# this table is deprecated
 create_candidate_table = """
 CREATE TABLE IF NOT EXISTS Candidate (
     CandidateID INT PRIMARY KEY AUTO_INCREMENT,
@@ -95,6 +96,16 @@ CREATE TABLE IF NOT EXISTS Candidate (
     LastName VARCHAR(50),
     Email VARCHAR(100),
     ProfileInfo TEXT
+);
+"""
+
+create_candidates_table = """
+CREATE TABLE IF NOT EXISTS candidates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    email VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -176,7 +187,7 @@ CREATE TABLE IF NOT EXISTS QuizLink (
     LinkExpiresAt TIMESTAMP,
     IsLinkUsed BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (QuizID) REFERENCES quizzes(id),
-    FOREIGN KEY (CandidateID) REFERENCES Candidate(CandidateID)
+    FOREIGN KEY (CandidateID) REFERENCES candidates(id)
 );
 """
 
@@ -194,14 +205,14 @@ CREATE TABLE IF NOT EXISTS QuizResponse (
 """
 
 create_quiz_responses_table = """
-CREATE TABLE IF NOT EXISTS quiz_responses (
+CREATE TABLE quiz_responses (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    quiz_id INT,
-    question_id INT,
-    selected_option_ids JSON,
-    candidate_name VARCHAR(100),
-    score INT,
-    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    quiz_id INT NOT NULL,
+    candidate_id INT NOT NULL,
+    answers JSON NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (quiz_id) REFERENCES quizzes(id),
+    FOREIGN KEY (candidate_id) REFERENCES candidates(id)
 );
 """
 
@@ -218,7 +229,7 @@ CREATE TABLE IF NOT EXISTS QuizResult (
 
 # Execute the queries to create the tables
 execute_query(connection, create_employers_table)
-execute_query(connection, create_candidate_table)
+execute_query(connection, create_candidates_table)
 execute_query(connection, create_quizzes_table)
 execute_query(connection, create_questions_table)
 execute_query(connection, create_answer_options_table)
