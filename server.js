@@ -60,9 +60,18 @@ function generateUniqueKey() {
     return crypto.randomBytes(8).toString('hex');
 }
 
-// Middleware to check if the user is authenticated
-function isAuthenticated(req, res, next) {
-    if (req.session && req.session.userId) {
+// Middleware to check if the user is an employer
+function isEmployerAuthenticated(req, res, next) {
+    if (req.session && req.session.userId && !req.session.candidateId) {
+        return next();
+    } else {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+}
+
+// Middleware to check if the user is a candidate
+function isCandidateAuthenticated(req, res, next) {
+    if (req.session && req.session.candidateId && !req.session.userId) {
         return next();
     } else {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -71,11 +80,12 @@ function isAuthenticated(req, res, next) {
 
 // Route to create a new quiz (only for authenticated employers)
 // Create a new quiz and send email with the unique link
-app.post('/create-quiz', isAuthenticated, async (req, res) => {
+app.post('/create-quiz', isEmployerAuthenticated, async (req, res) => {
     const { title, description, timeLimit, questions, candidateEmail } = req.body;
     const employerId = req.session.userId;
     const uniqueKey = crypto.randomBytes(8).toString('hex');
-    const quizLink = `http://localhost:3000/take-quiz/${uniqueKey}`;
+    const quizLink = `http://localhost:3000/candidate_login.html`;
+    console.log('hello jesse')
 
     // Insert the quiz into the database
     const insertQuizQuery = `INSERT INTO quizzes (title, description, time_limit, unique_key, employer_id) VALUES (?, ?, ?, ?, ?)`;
@@ -128,7 +138,7 @@ app.post('/create-quiz', isAuthenticated, async (req, res) => {
                 // Send the email with the quiz link
                 if (candidateEmail) {
                     const subject = `Invitation to Take a Quiz: ${title}`;
-                    const text = `You have been invited to take a quiz. Please use the following link to access it:\n\n${quizLink}\n\nGood luck!`;
+                    const text = `You have been invited to take a quiz. Please use the following link and key to access it:\n\n${quizLink}\n\n${uniqueKey}\n\nGood luck!`;
                     await sendEmail(candidateEmail, subject, text);
                 }
                 res.json({ message: 'Quiz created successfully', link: quizLink });
@@ -200,37 +210,136 @@ app.delete('/quiz/:id', (req, res) => {
 
 
 // Fetch details of a specific quiz for editing
-app.get('/quiz/:id', (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+app.get('/quiz/:id', isEmployerAuthenticated, (req, res) => {
     const quizId = req.params.id;
-    const query = `SELECT * FROM quizzes WHERE id = ? AND employer_id = ?`;
 
-    db.query(query, [quizId, req.session.userId], (err, results) => {
-        if (err || results.length === 0) {
+    // Query to fetch quiz details
+    const quizQuery = `
+        SELECT id, title, description, time_limit
+        FROM quizzes
+        WHERE id = ? AND employer_id = ?`;
+
+    // Query to fetch questions and their options
+    const questionsQuery = `
+        SELECT q.id AS question_id, q.question_text, q.question_type,
+               ao.id AS option_id, ao.option_text, ao.is_correct
+        FROM questions q
+        LEFT JOIN answer_options ao ON q.id = ao.question_id
+        WHERE q.quiz_id = ?
+        ORDER BY q.id, ao.id`;
+
+    db.query(quizQuery, [quizId, req.session.userId], (quizErr, quizResults) => {
+        if (quizErr || quizResults.length === 0) {
             return res.status(404).json({ error: 'Quiz not found' });
         }
-        res.json(results[0]);
+
+        const quiz = quizResults[0];
+        db.query(questionsQuery, [quizId], (questionsErr, questionsResults) => {
+            if (questionsErr) {
+                return res.status(500).json({ error: 'Failed to fetch quiz questions' });
+            }
+
+            const questions = {};
+            questionsResults.forEach(row => {
+                if (!questions[row.question_id]) {
+                    questions[row.question_id] = {
+                        id: row.question_id,
+                        text: row.question_text,
+                        type: row.question_type,
+                        options: []
+                    };
+                }
+                if (row.option_id) {
+                    questions[row.question_id].options.push({
+                        id: row.option_id,
+                        text: row.option_text,
+                        isCorrect: !!row.is_correct
+                    });
+                }
+            });
+
+            quiz.questions = Object.values(questions);
+            res.json(quiz);
+        });
     });
 });
 
-// Update a specific quiz
-app.put('/quiz/:id', (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+app.put('/quiz/:id', isEmployerAuthenticated, (req, res) => {
     const quizId = req.params.id;
-    const { title, description, timeLimit } = req.body;
+    const { title, description, timeLimit, questions } = req.body;
 
-    const updateQuery = `UPDATE quizzes SET title = ?, description = ?, time_limit = ? WHERE id = ? AND employer_id = ?`;
-    db.query(updateQuery, [title, description, timeLimit, quizId, req.session.userId], (err) => {
-        if (err) {
+    // Update quiz details
+    const updateQuizQuery = `
+        UPDATE quizzes
+        SET title = ?, description = ?, time_limit = ?
+        WHERE id = ? AND employer_id = ?`;
+
+    db.query(updateQuizQuery, [title, description, timeLimit, quizId, req.session.userId], (quizErr) => {
+        if (quizErr) {
             return res.status(500).json({ error: 'Failed to update quiz' });
         }
-        res.json({ message: 'Quiz updated successfully' });
+
+        // Delete answer options associated with the quiz's questions
+        const deleteOptionsQuery = `
+            DELETE ao
+            FROM answer_options ao
+            JOIN questions q ON ao.question_id = q.id
+            WHERE q.quiz_id = ?`;
+
+        db.query(deleteOptionsQuery, [quizId], (deleteOptionsErr) => {
+            if (deleteOptionsErr) {
+                return res.status(500).json({ error: 'Failed to clear old quiz options' });
+            }
+
+            // Delete existing questions
+            const deleteQuestionsQuery = `DELETE FROM questions WHERE quiz_id = ?`;
+            db.query(deleteQuestionsQuery, [quizId], (deleteQuestionsErr) => {
+                if (deleteQuestionsErr) {
+                    return res.status(500).json({ error: 'Failed to clear old quiz data' });
+                }
+
+                // Insert updated questions and options
+                const questionPromises = questions.map(question => {
+                    return new Promise((resolve, reject) => {
+                        const insertQuestionQuery = `
+                            INSERT INTO questions (quiz_id, question_text, question_type)
+                            VALUES (?, ?, ?)`;
+
+                        db.query(insertQuestionQuery, [quizId, question.text, question.type], (questionErr, questionResult) => {
+                            if (questionErr) {
+                                return reject(questionErr);
+                            }
+
+                            const questionId = questionResult.insertId;
+
+                            // Insert options for each question
+                            if (question.options && question.options.length > 0) {
+                                const optionPromises = question.options.map(option => {
+                                    return new Promise((resolveOption, rejectOption) => {
+                                        const insertOptionQuery = `
+                                            INSERT INTO answer_options (question_id, option_text, is_correct)
+                                            VALUES (?, ?, ?)`;
+
+                                        db.query(insertOptionQuery, [questionId, option.text, option.isCorrect ? 1 : 0], (optionErr) => {
+                                            if (optionErr) return rejectOption(optionErr);
+                                            resolveOption();
+                                        });
+                                    });
+                                });
+
+                                Promise.all(optionPromises).then(resolve).catch(reject);
+                            } else {
+                                resolve();
+                            }
+                        });
+                    });
+                });
+
+                Promise.all(questionPromises)
+                    .then(() => res.json({ message: 'Quiz updated successfully' }))
+                    .catch(err => res.status(500).json({ error: 'Failed to update questions/options' }));
+            });
+        });
     });
 });
 
@@ -361,6 +470,155 @@ async function sendEmail(to, subject, text) {
         console.error('Error sending email:', error);
     }
 }
+
+
+////////////////// CANDIDATE ACCOUNT CREATION ROUTES ////////////////
+
+// Candidate Signup
+app.post('/candidate-signup', async (req, res) => {
+    const { name, email, password } = req.body;
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const insertQuery = `INSERT INTO candidates (name, email, password_hash) VALUES (?, ?, ?)`;
+
+    db.query(insertQuery, [name, email, passwordHash], (err) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ error: 'Email already in use.' });
+            }
+            return res.status(500).json({ error: 'Failed to create account.' });
+        }
+        res.status(201).json({ message: 'Account created successfully!' });
+    });
+});
+
+// Candidate Login
+app.post('/candidate-login', (req, res) => {
+    const { email, password } = req.body;
+
+    const query = `SELECT id, password_hash FROM candidates WHERE email = ?`;
+    db.query(query, [email], async (err, results) => {
+        if (err || results.length === 0) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        const candidate = results[0];
+        const passwordMatch = await bcrypt.compare(password, candidate.password_hash);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        // Save candidate session
+        req.session.candidateId = candidate.id;
+        req.session.isCandidate = true; // Flag to indicate candidate session
+        req.session.save((saveErr) => {
+            if (saveErr) {
+                console.error('Failed to save session:', saveErr);
+                return res.status(500).json({ error: 'Failed to log in.' });
+            }
+            res.json({ message: 'Login successful!' });
+        });
+    });
+});
+
+// Candidate auth
+app.get('/check-candidate-auth', (req, res) => {
+    if (req.session && req.session.candidateId) {
+        res.status(200).json({ authenticated: true });
+    } else {
+        res.status(401).json({ error: 'Unauthorized' });
+    }
+});
+
+
+////////////////// CANDIDATE QUIZ TAKING ROUTES ////////////////
+
+// Quiz Key Validation
+app.post('/verify-quiz-key', isCandidateAuthenticated, (req, res) => {
+    const { quizKey } = req.body;
+
+    const query = `SELECT id, title, description FROM quizzes WHERE unique_key = ?`;
+    db.query(query, [quizKey], (err, results) => {
+        if (err || results.length === 0) {
+            return res.status(404).json({ error: 'Invalid quiz key.' });
+        }
+
+        const quiz = results[0];
+        res.json(quiz);
+    });
+});
+
+// Fetch Quiz Data
+app.get('/take-quiz/:key', isCandidateAuthenticated, (req, res) => {
+    const quizKey = req.params.key;
+
+    const quizQuery = `SELECT id, title, description FROM quizzes WHERE unique_key = ?`;
+    const questionsQuery = `
+        SELECT q.id AS question_id, q.question_text, q.question_type,
+               ao.option_text
+        FROM questions q
+        LEFT JOIN answer_options ao ON q.id = ao.question_id
+        WHERE q.quiz_id = ?
+        ORDER BY q.id, ao.id`;
+
+    db.query(quizQuery, [quizKey], (quizErr, quizResults) => {
+        if (quizErr || quizResults.length === 0) {
+            return res.status(404).json({ error: 'Quiz not found.' });
+        }
+
+        const quiz = quizResults[0];
+        db.query(questionsQuery, [quiz.id], (questionsErr, questionsResults) => {
+            if (questionsErr) {
+                return res.status(500).json({ error: 'Failed to load quiz questions.' });
+            }
+
+            const questions = {};
+            questionsResults.forEach(row => {
+                if (!questions[row.question_id]) {
+                    questions[row.question_id] = {
+                        text: row.question_text,
+                        type: row.question_type,
+                        options: []
+                    };
+                }
+                if (row.option_text) {
+                    questions[row.question_id].options.push({ text: row.option_text });
+                }
+            });
+
+            quiz.questions = Object.values(questions);
+            res.json(quiz);
+        });
+    });
+});
+
+// Submit Quiz Responses
+app.post('/submit-quiz', isCandidateAuthenticated, (req, res) => {
+    const { quizKey, answers } = req.body;
+
+    const quizQuery = `SELECT id FROM quizzes WHERE unique_key = ?`;
+    db.query(quizQuery, [quizKey], (quizErr, quizResults) => {
+        if (quizErr || quizResults.length === 0) {
+            return res.status(404).json({ error: 'Quiz not found.' });
+        }
+
+        const quizId = quizResults[0].id;
+        const candidateId = req.session.candidateId;
+
+        // Insert quiz response into the database
+        const insertResponseQuery = `
+            INSERT INTO quiz_responses (quiz_id, candidate_id, answers, completed_at)
+            VALUES (?, ?, ?, NOW())`;
+        db.query(insertResponseQuery, [quizId, candidateId, JSON.stringify(answers)], (responseErr) => {
+            if (responseErr) {
+                return res.status(500).json({ error: 'Failed to save quiz response.' });
+            }
+            res.json({ message: 'Quiz submitted successfully!' });
+        });
+    });
+});
+
 
 // Start the server
 app.listen(PORT, () => {
