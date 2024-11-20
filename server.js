@@ -84,7 +84,7 @@ app.post('/create-quiz', isEmployerAuthenticated, async (req, res) => {
     const { title, description, timeLimit, questions, candidateEmail } = req.body;
     const employerId = req.session.userId;
     const uniqueKey = crypto.randomBytes(8).toString('hex');
-    const quizLink = `http://localhost:3000/take-quiz/${uniqueKey}`;
+    const quizLink = `http://localhost:3000/candidate_login.html`;
     console.log('hello jesse')
 
     // Insert the quiz into the database
@@ -138,7 +138,7 @@ app.post('/create-quiz', isEmployerAuthenticated, async (req, res) => {
                 // Send the email with the quiz link
                 if (candidateEmail) {
                     const subject = `Invitation to Take a Quiz: ${title}`;
-                    const text = `You have been invited to take a quiz. Please use the following link to access it:\n\n${quizLink}\n\nGood luck!`;
+                    const text = `You have been invited to take a quiz. Please use the following link and key to access it:\n\n${quizLink}\n\n${uniqueKey}\n\nGood luck!`;
                     await sendEmail(candidateEmail, subject, text);
                 }
                 res.json({ message: 'Quiz created successfully', link: quizLink });
